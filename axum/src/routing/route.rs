@@ -28,6 +28,7 @@ use tower_service::Service;
 ///
 /// You normally shouldn't need to care about this type. It's used in
 /// [`Router::layer`](super::Router::layer).
+/// 路由如何存储在 [`Router`](super::Router) 内部.
 pub struct Route<E = Infallible>(AxumMutex<BoxCloneService<Request, Response, E>>);
 
 impl<E> Route<E> {

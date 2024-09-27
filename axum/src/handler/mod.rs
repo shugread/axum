@@ -131,6 +131,7 @@ pub use self::service::HandlerService;
         note = "Consider using `#[axum::debug_handler]` to improve the error message"
     )
 )]
+// 可用于处理请求的异步函数的特征.
 pub trait Handler<T, S>: Clone + Send + Sized + 'static {
     /// The type of future calling this handler returns.
     type Future: Future<Output = Response> + Send + 'static;

@@ -10,6 +10,7 @@ use super::{
     MethodRouter, Route, RouteId, FALLBACK_PARAM_PATH, NEST_TAIL_PARAM,
 };
 
+// path路由
 pub(super) struct PathRouter<S, const IS_FALLBACK: bool> {
     routes: HashMap<RouteId, Endpoint<S>>,
     node: Arc<Node>,
@@ -26,6 +27,7 @@ where
         this
     }
 
+    // 设置fallback
     pub(super) fn set_fallback(&mut self, endpoint: Endpoint<S>) {
         self.replace_endpoint("/", endpoint.clone());
         self.replace_endpoint(FALLBACK_PARAM_PATH, endpoint);
@@ -36,11 +38,13 @@ impl<S, const IS_FALLBACK: bool> PathRouter<S, IS_FALLBACK>
 where
     S: Clone + Send + Sync + 'static,
 {
+    // 添加路由
     pub(super) fn route(
         &mut self,
         path: &str,
         method_router: MethodRouter<S>,
     ) -> Result<(), Cow<'static, str>> {
+        // 路径必须以`/`开始
         fn validate_path(path: &str) -> Result<(), &'static str> {
             if path.is_empty() {
                 return Err("Paths must start with a `/`. Use \"/\" for root routes");
@@ -61,6 +65,7 @@ where
         {
             // if we're adding a new `MethodRouter` to a route that already has one just
             // merge them. This makes `.route("/", get(_)).route("/", post(_))` work
+            // 如果已经有路由, 合并路由, 并替换以前的路由
             let service = Endpoint::MethodRouter(
                 prev_method_router
                     .clone()
@@ -72,6 +77,7 @@ where
             Endpoint::MethodRouter(method_router)
         };
 
+        // 添加路由
         let id = self.next_route_id();
         self.set_node(path, id)?;
         self.routes.insert(id, endpoint);
@@ -316,6 +322,7 @@ where
         }
     }
 
+    // 调用
     pub(super) fn call_with_state(
         &self,
         mut req: Request,
@@ -333,6 +340,7 @@ where
 
         let path = req.uri().path().to_owned();
 
+        // 查找route_id
         match self.node.at(&path) {
             Ok(match_) => {
                 let id = *match_.value;
@@ -348,6 +356,7 @@ where
 
                 url_params::insert_url_params(req.extensions_mut(), match_.params);
 
+                // 调用方法
                 let endpoint = self
                     .routes
                     .get(&id)
@@ -370,6 +379,7 @@ where
         }
     }
 
+    // 替换节点
     pub(super) fn replace_endpoint(&mut self, path: &str, endpoint: Endpoint<S>) {
         match self.node.at(path) {
             Ok(match_) => {

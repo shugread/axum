@@ -58,6 +58,7 @@ macro_rules! panic_on_err {
 pub(crate) struct RouteId(u32);
 
 /// The router type for composing handlers and services.
+/// 用于组成Handler和Service的路由器类型.
 #[must_use]
 pub struct Router<S = ()> {
     inner: Arc<RouterInner<S>>,
@@ -111,6 +112,7 @@ where
     ///
     /// Unless you add additional routes this will respond with `404 Not Found` to
     /// all requests.
+    /// 创建路由
     pub fn new() -> Self {
         Self {
             inner: Arc::new(RouterInner {
@@ -122,6 +124,7 @@ where
         }
     }
 
+    // 转换Router
     fn map_inner<F, S2>(self, f: F) -> Router<S2>
     where
         F: FnOnce(RouterInner<S>) -> RouterInner<S2>,
@@ -131,6 +134,7 @@ where
         }
     }
 
+    // 修改inner
     fn tap_inner_mut<F>(self, f: F) -> Self
     where
         F: FnOnce(&mut RouterInner<S>),
@@ -142,6 +146,7 @@ where
         }
     }
 
+    // 返回inner
     fn into_inner(self) -> RouterInner<S> {
         match Arc::try_unwrap(self.inner) {
             Ok(inner) => inner,
@@ -156,6 +161,7 @@ where
 
     #[doc = include_str!("../docs/routing/route.md")]
     #[track_caller]
+    // 插入路由
     pub fn route(self, path: &str, method_router: MethodRouter<S>) -> Self {
         self.tap_inner_mut(|this| {
             panic_on_err!(this.path_router.route(path, method_router));
@@ -179,6 +185,7 @@ where
             Err(service) => service,
         };
 
+        // 添加Service
         self.tap_inner_mut(|this| {
             panic_on_err!(this.path_router.route_service(path, service));
         })
@@ -187,6 +194,7 @@ where
     #[doc = include_str!("../docs/routing/nest.md")]
     #[doc(alias = "scope")] // Some web frameworks like actix-web use this term
     #[track_caller]
+    // 嵌套路由
     pub fn nest(self, path: &str, router: Router<S>) -> Self {
         let RouterInner {
             path_router,
@@ -208,6 +216,7 @@ where
     }
 
     /// Like [`nest`](Self::nest), but accepts an arbitrary `Service`.
+    /// 嵌套服务
     #[track_caller]
     pub fn nest_service<T>(self, path: &str, service: T) -> Self
     where
@@ -222,6 +231,7 @@ where
 
     #[doc = include_str!("../docs/routing/merge.md")]
     #[track_caller]
+    // 合并路由
     pub fn merge<R>(self, other: R) -> Self
     where
         R: Into<Router<S>>,
@@ -243,10 +253,12 @@ where
             match (this.default_fallback, default_fallback) {
                 // both have the default fallback
                 // use the one from other
+                // 两者都有fallback_router,other
                 (true, true) => {
                     this.fallback_router.merge(other_fallback).expect(PANIC_MSG);
                 }
                 // this has default fallback, other has a custom fallback
+                // this有default_fallback,other有自定义default_fallback
                 (true, false) => {
                     this.fallback_router.merge(other_fallback).expect(PANIC_MSG);
                     this.default_fallback = false;
@@ -258,6 +270,7 @@ where
                     this.fallback_router = other_fallback;
                 }
                 // both have a custom fallback, not allowed
+                // 不允许,都有自定义fallback
                 (false, false) => {
                     panic!("Cannot merge two `Router`s that both have a fallback")
                 }
@@ -273,6 +286,7 @@ where
     }
 
     #[doc = include_str!("../docs/routing/layer.md")]
+    // 使用layer
     pub fn layer<L>(self, layer: L) -> Router<S>
     where
         L: Layer<Route> + Clone + Send + 'static,
@@ -291,6 +305,7 @@ where
 
     #[doc = include_str!("../docs/routing/route_layer.md")]
     #[track_caller]
+    // 路由layer
     pub fn route_layer<L>(self, layer: L) -> Self
     where
         L: Layer<Route> + Clone + Send + 'static,
@@ -314,6 +329,7 @@ where
 
     #[track_caller]
     #[doc = include_str!("../docs/routing/fallback.md")]
+    // 自定义fallback
     pub fn fallback<H, T>(self, handler: H) -> Self
     where
         H: Handler<T, S>,
@@ -329,6 +345,7 @@ where
     /// Add a fallback [`Service`] to the router.
     ///
     /// See [`Router::fallback`] for more details.
+    /// 使用Serveice作为fallback
     pub fn fallback_service<T>(self, service: T) -> Self
     where
         T: Service<Request, Error = Infallible> + Clone + Send + 'static,
@@ -350,6 +367,7 @@ where
     }
 
     #[doc = include_str!("../docs/routing/with_state.md")]
+    // 添加状态
     pub fn with_state<S2>(self, state: S) -> Router<S2> {
         self.map_inner(|this| RouterInner {
             path_router: this.path_router.with_state(state.clone()),
@@ -359,17 +377,21 @@ where
         })
     }
 
+    // 调用
     pub(crate) fn call_with_state(&self, req: Request, state: S) -> RouteFuture<Infallible> {
+        // 先使用path_router查找处理器
         let (req, state) = match self.inner.path_router.call_with_state(req, state) {
             Ok(future) => return future,
             Err((req, state)) => (req, state),
         };
 
+        // 使用fallback
         let (req, state) = match self.inner.fallback_router.call_with_state(req, state) {
             Ok(future) => return future,
             Err((req, state)) => (req, state),
         };
 
+        // 使用捕获所有的fallback
         self.inner
             .catch_all_fallback
             .clone()
@@ -441,6 +463,7 @@ where
     ///
     /// This is the same as [`Router::as_service`] instead it returns an owned [`Service`]. See
     /// that method for more details.
+    /// 转换成Serveice
     pub fn into_service<B>(self) -> RouterIntoService<B, S> {
         RouterIntoService {
             router: self,
@@ -616,6 +639,7 @@ where
     }
 }
 
+// fallback结构
 enum Fallback<S, E = Infallible> {
     Default(Route<E>),
     Service(Route<E>),
@@ -626,14 +650,18 @@ impl<S, E> Fallback<S, E>
 where
     S: Clone,
 {
+    // 合并
     fn merge(self, other: Self) -> Option<Self> {
         match (self, other) {
+            // 都是默认的,选择self的
             (Self::Default(_), pick @ Self::Default(_)) => Some(pick),
+            // 选择设置了的
             (Self::Default(_), pick) | (pick, Self::Default(_)) => Some(pick),
             _ => None,
         }
     }
 
+    // 转换
     fn map<F, E2>(self, f: F) -> Fallback<S, E2>
     where
         S: 'static,
@@ -648,6 +676,7 @@ where
         }
     }
 
+    // 将state保存到Route
     fn with_state<S2>(self, state: S) -> Fallback<S2, E> {
         match self {
             Fallback::Default(route) => Fallback::Default(route),
@@ -656,6 +685,7 @@ where
         }
     }
 
+    // 调用
     fn call_with_state(&mut self, req: Request, state: S) -> RouteFuture<E> {
         match self {
             Fallback::Default(route) | Fallback::Service(route) => {
@@ -689,6 +719,7 @@ impl<S, E> fmt::Debug for Fallback<S, E> {
     }
 }
 
+// path的端点
 #[allow(clippy::large_enum_variant)]
 enum Endpoint<S> {
     MethodRouter(MethodRouter<S>),

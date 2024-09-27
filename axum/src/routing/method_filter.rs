@@ -5,6 +5,7 @@ use std::{
 };
 
 /// A filter that matches one or more HTTP methods.
+/// 与一个或多个 HTTP 方法匹配的过滤器.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct MethodFilter(u16);
 

@@ -34,6 +34,7 @@ pub use sse::Sse;
 /// An HTML response.
 ///
 /// Will automatically get `Content-Type: text/html`.
+/// 返回html
 #[derive(Clone, Copy, Debug)]
 #[must_use]
 pub struct Html<T>(pub T);

@@ -10,6 +10,7 @@ use crate::{
     Router,
 };
 
+// 存储的处理方法
 pub(crate) struct BoxedIntoRoute<S, E>(AxumMutex<Box<dyn ErasedIntoRoute<S, E>>>);
 
 impl<S> BoxedIntoRoute<S, Infallible>
@@ -59,6 +60,7 @@ impl<S, E> fmt::Debug for BoxedIntoRoute<S, E> {
     }
 }
 
+// 擦除类型,作为route
 pub(crate) trait ErasedIntoRoute<S, E>: Send {
     fn clone_box(&self) -> Box<dyn ErasedIntoRoute<S, E>>;
 
@@ -68,6 +70,7 @@ pub(crate) trait ErasedIntoRoute<S, E>: Send {
     fn call_with_state(self: Box<Self>, request: Request, state: S) -> RouteFuture<E>;
 }
 
+// 擦除Handler的类型
 pub(crate) struct MakeErasedHandler<H, S> {
     pub(crate) handler: H,
     pub(crate) into_route: fn(H, S) -> Route,
@@ -103,6 +106,7 @@ where
     }
 }
 
+// 擦除Router的类型
 #[allow(dead_code)]
 pub(crate) struct MakeErasedRouter<S> {
     pub(crate) router: Router<S>,

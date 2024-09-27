@@ -976,6 +976,7 @@ where
             }
         }
 
+        // 合并路由
         self.get = merge_inner(path, "GET", self.get, other.get);
         self.head = merge_inner(path, "HEAD", self.head, other.head);
         self.delete = merge_inner(path, "DELETE", self.delete, other.delete);
@@ -985,6 +986,7 @@ where
         self.put = merge_inner(path, "PUT", self.put, other.put);
         self.trace = merge_inner(path, "TRACE", self.trace, other.trace);
 
+        // 合并fallback
         self.fallback = self
             .fallback
             .merge(other.fallback)

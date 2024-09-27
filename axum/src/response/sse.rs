@@ -51,6 +51,7 @@ use sync_wrapper::SyncWrapper;
 use tokio::time::Sleep;
 
 /// An SSE response
+/// SSE响应
 #[derive(Clone)]
 #[must_use]
 pub struct Sse<S> {

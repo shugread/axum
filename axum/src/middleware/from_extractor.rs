@@ -88,6 +88,7 @@ use tower_service::Service;
 /// ```
 ///
 /// [`Bytes`]: bytes::Bytes
+/// 从提取器创建中间件.
 pub fn from_extractor<E>() -> FromExtractorLayer<E, ()> {
     from_extractor_with_state(())
 }
